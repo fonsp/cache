@@ -27,6 +27,9 @@ outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key. Returns \"\" when the key is new. Forwarded from actions/cache'
     value: ${{ steps.hit.outputs.cache-hit }}
+  cache-compiled-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key of the compiled cache. Returns \"\" when the key is new. Forwarded from actions/cache'
+    value: ${{ steps.hit.outputs.cache-compiled-hit }}
 
 runs:
   using: 'composite'
@@ -39,20 +42,36 @@ runs:
         echo "PACKAGES_PATH=$P_PATH" >> $GITHUB_ENV
         [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
         echo "REGISTRIES_PATH=$R_PATH" >> $GITHUB_ENV
-        [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="~/.julia/compiled"
-        echo "PRECOMPILATION_CACHE_PATH=$PCC_PATH" >> $GITHUB_ENV
       shell: bash
 
     - uses: actions/cache@58c146cc91c5b9e778e71775dfe9bf1442ad9a12
       id: cache
       with:
-        path: "${{ format('{0}\n{1}\n{2}\n{3}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH, env.PRECOMPILATION_CACHE_PATH) }}"
-        key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
+        path: "${{ format('{0}\n{1}\n{2}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH) }}"
+        key: ${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
-          ${{ runner.os }}-test-${{ inputs.cache-name }}-
+          ${{ inputs.cache-name }}-
+        enableCrossOsArchive: true
 
     - id: hit
       run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+      shell: bash
+
+    - uses: actions/cache@58c146cc91c5b9e778e71775dfe9bf1442ad9a12
+      id: cache-compiled
+      if: inputs.cache-compiled == 'true'
+      with:
+        path: ~/.julia/compiled
+        key: ${{ inputs.cache-name }}-compiled-${{ hashFiles('**/Project.toml') }}
+        restore-keys: |
+          ${{ inputs.cache-name }}-compiled-
+        enableCrossOsArchive: false
+
+    - id: compiled-hit
+      if: inputs.cache-compiled == 'true'
+      run: echo "cache-compiled-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
+      env:
+        CACHE_HIT: ${{ steps.cache-compiled.outputs.cache-hit }}
       shell: bash
