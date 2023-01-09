@@ -64,7 +64,7 @@ runs:
       if: inputs.cache-compiled == 'true'
       with:
         path: ~/.julia/compiled
-        key: ${{ inputs.cache-name }}-compiled-${{ hashFiles('**/Project.toml') }}
+        key: ${{ inputs.cache-name }}-compiled-${{ runner.os }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ inputs.cache-name }}-compiled-
         enableCrossOsArchive: false
